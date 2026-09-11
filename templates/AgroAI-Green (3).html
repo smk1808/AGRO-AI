@@ -1,0 +1,2048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AgroAI-Green | Smart Farming Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+/* ===================================================
+   RESET & ROOT
+=================================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-deep:      #060d1a;
+  --bg-base:      #0b1628;
+  --bg-card:      rgba(13, 25, 48, 0.75);
+  --bg-inner:     rgba(255,255,255,0.03);
+  --border:       rgba(255,255,255,0.07);
+  --border-hi:    rgba(255,255,255,0.13);
+
+  --green:        #22d55a;
+  --green-mid:    #16a34a;
+  --green-dark:   #0d6630;
+  --green-glow:   rgba(34,213,90,0.22);
+  --green-soft:   rgba(34,213,90,0.08);
+
+  --blue:         #38bdf8;
+  --blue-glow:    rgba(56,189,248,0.22);
+  --blue-soft:    rgba(56,189,248,0.08);
+
+  --orange:       #fb923c;
+  --orange-glow:  rgba(251,146,60,0.22);
+  --orange-soft:  rgba(251,146,60,0.08);
+
+  --amber:        #fbbf24;
+  --amber-glow:   rgba(251,191,36,0.22);
+  --amber-soft:   rgba(251,191,36,0.08);
+
+  --red:          #f43f5e;
+  --red-glow:     rgba(244,63,94,0.22);
+  --red-soft:     rgba(244,63,94,0.08);
+
+  --purple:       #a78bfa;
+
+  --text:         #e8f0fe;
+  --text-dim:     #8ba3c7;
+  --text-muted:   #3d5475;
+
+  --radius-xl:    20px;
+  --radius-lg:    14px;
+  --radius-md:    10px;
+  --radius-sm:    7px;
+
+  --shadow-lg:    0 20px 60px rgba(0,0,0,0.6);
+  --shadow-md:    0 8px 32px rgba(0,0,0,0.45);
+  --shadow-sm:    0 4px 16px rgba(0,0,0,0.3);
+
+  --glass-blur:   blur(24px);
+  --transition:   0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html { font-size: 15px; scroll-behavior: smooth; }
+
+body {
+  min-height: 100vh;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 400;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+/* ===================================================
+   BACKGROUND SCENE
+=================================================== */
+.bg-scene {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+}
+
+.bg-scene::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 20%, rgba(34,213,90,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 75%, rgba(56,189,248,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(13,25,48,0.8) 0%, transparent 80%),
+    linear-gradient(170deg, #060d1a 0%, #0b1628 40%, #060e1f 100%);
+}
+
+/* Grid lines */
+.bg-scene::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(34,213,90,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,213,90,0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 30%, transparent 100%);
+}
+
+/* Floating orbs */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: orb-drift 14s ease-in-out infinite alternate;
+}
+.orb-1 { width:400px; height:400px; background:rgba(34,213,90,0.06);  top:-80px;  left:-100px; animation-duration:16s; }
+.orb-2 { width:350px; height:350px; background:rgba(56,189,248,0.05); bottom:-60px; right:-80px; animation-duration:20s; animation-delay:-5s; }
+.orb-3 { width:250px; height:250px; background:rgba(167,139,250,0.04); top:40%; left:60%; animation-duration:18s; animation-delay:-8s; }
+
+@keyframes orb-drift {
+  from { transform: translate(0,0) scale(1); }
+  to   { transform: translate(40px, 30px) scale(1.12); }
+}
+
+/* Particles */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--green);
+  opacity: 0;
+  animation: particle-float var(--dur, 10s) var(--delay, 0s) ease-in-out infinite;
+}
+@keyframes particle-float {
+  0%   { transform: translateY(0) scale(0.8);  opacity: 0; }
+  20%  { opacity: 0.6; }
+  80%  { opacity: 0.3; }
+  100% { transform: translateY(-70px) scale(1.2); opacity: 0; }
+}
+
+/* ===================================================
+   MAIN LAYOUT
+=================================================== */
+.app {
+  position: relative; z-index: 1;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 22px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ===================================================
+   GLASS CARD BASE
+=================================================== */
+.glass {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-md);
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.glass:hover {
+  border-color: var(--border-hi);
+}
+
+/* ===================================================
+   HEADER
+=================================================== */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 26px;
+  gap: 16px;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo {
+  width: 46px; height: 46px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(34,213,90,0.2), rgba(34,213,90,0.06));
+  border: 1px solid rgba(34,213,90,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 0 20px rgba(34,213,90,0.15), inset 0 1px 0 rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  animation: logo-pulse 4s ease-in-out infinite;
+}
+@keyframes logo-pulse {
+  0%,100% { box-shadow: 0 0 20px rgba(34,213,90,0.15), inset 0 1px 0 rgba(255,255,255,0.08); }
+  50%     { box-shadow: 0 0 35px rgba(34,213,90,0.30), inset 0 1px 0 rgba(255,255,255,0.08); }
+}
+
+.brand-text h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  color: #fff;
+}
+.brand-text h1 span { color: var(--green); }
+.brand-text p {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Connection Badge */
+.conn-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  background: var(--bg-inner);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  transition: var(--transition);
+  color: var(--text-dim);
+}
+.conn-badge.is-connected {
+  border-color: rgba(34,213,90,0.35);
+  color: var(--green);
+  background: rgba(34,213,90,0.07);
+  box-shadow: 0 0 16px rgba(34,213,90,0.1);
+}
+.conn-badge.is-disconnected {
+  border-color: rgba(244,63,94,0.35);
+  color: var(--red);
+  background: rgba(244,63,94,0.07);
+}
+
+.conn-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+  transition: background var(--transition), box-shadow var(--transition);
+}
+.is-connected   .conn-dot { background: var(--green); box-shadow: 0 0 10px var(--green); animation: blink 1.8s infinite; }
+.is-disconnected .conn-dot { background: var(--red);   box-shadow: 0 0 10px var(--red); }
+@keyframes blink {
+  0%,100% { opacity:1; } 50% { opacity:0.35; }
+}
+
+/* Clock */
+.clock-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  background: var(--bg-inner);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+.clock-icon { font-size: 0.9rem; }
+
+/* ===================================================
+   SENSOR GRID
+=================================================== */
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.sensor-card {
+  padding: 22px 20px 18px;
+  border-radius: var(--radius-xl);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+}
+
+.sensor-card::before {
+  content: '';
+  position: absolute;
+  top: -40%; left: -20%;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, var(--card-glow) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity var(--transition);
+  pointer-events: none;
+}
+.sensor-card:hover::before { opacity: 1; }
+.sensor-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--card-accent) !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 30px var(--card-glow) !important;
+}
+
+/* Card colour themes */
+.card-temp   { --card-accent: var(--orange); --card-glow: var(--orange-glow); }
+.card-humid  { --card-accent: var(--blue);   --card-glow: var(--blue-glow);   }
+.card-soil   { --card-accent: var(--green);  --card-glow: var(--green-glow);  }
+.card-light  { --card-accent: var(--amber);  --card-glow: var(--amber-glow);  }
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.card-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.card-icon-wrap {
+  width: 38px; height: 38px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem;
+  background: rgba(255,255,255,0.04);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+.card-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.card-value {
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--card-accent);
+  text-shadow: 0 0 30px var(--card-glow);
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -1px;
+  transition: color var(--transition);
+  min-width: 60px;
+}
+.card-unit {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+
+/* Mini sparkbar */
+.card-bar-track {
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.card-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--card-accent);
+  box-shadow: 0 0 8px var(--card-accent);
+  width: 0%;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===================================================
+   MIDDLE ROW
+=================================================== */
+.middle-row {
+  display: grid;
+  grid-template-columns: 220px 1fr 280px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* -- PUMP PANEL -- */
+.pump-panel {
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.panel-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 22px;
+}
+.panel-title-icon { font-size: 0.95rem; }
+
+.pump-dial {
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+.pump-dial::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--pump-color, var(--red));
+  box-shadow: 0 0 30px var(--pump-glow, var(--red-glow)), inset 0 0 30px var(--pump-glow, var(--red-glow));
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.pump-dial::after {
+  content: '';
+  position: absolute; inset: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.pump-inner {
+  text-align: center;
+  position: relative; z-index: 1;
+}
+.pump-emoji { font-size: 2rem; display: block; margin-bottom: 5px; line-height: 1; }
+.pump-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--pump-color, var(--red));
+  transition: color var(--transition);
+}
+
+.pump-on  { --pump-color: var(--blue); --pump-glow: var(--blue-glow); }
+.pump-off { --pump-color: var(--red);  --pump-glow: var(--red-glow);  }
+
+.pump-status-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* -- AI PANEL -- */
+.ai-panel {
+  padding: 22px 24px;
+  border-color: rgba(34,213,90,0.18) !important;
+  box-shadow: var(--shadow-md), 0 0 40px rgba(34,213,90,0.06) !important;
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.ai-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid;
+  transition: var(--transition);
+}
+.chip-healthy  { color: var(--green); border-color: rgba(34,213,90,0.4); background: rgba(34,213,90,0.08); }
+.chip-warning  { color: var(--amber); border-color: rgba(251,191,36,0.4); background: rgba(251,191,36,0.08); }
+.chip-dry      { color: var(--red);   border-color: rgba(244,63,94,0.4); background: rgba(244,63,94,0.08); }
+
+.chip-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+.ai-confidence-wrap { text-align: right; }
+.ai-conf-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.ai-conf-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--green);
+  display: block;
+  line-height: 1.1;
+}
+
+.ai-bar-track {
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.ai-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--green-dark), var(--green));
+  box-shadow: 0 0 12px rgba(34,213,90,0.5);
+  width: 0%;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-reco-box {
+  background: rgba(34,213,90,0.04);
+  border: 1px solid rgba(34,213,90,0.12);
+  border-left: 3px solid var(--green);
+  border-radius: var(--radius-md);
+  padding: 13px 15px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.65;
+}
+
+/* -- SYSINFO PANEL -- */
+.sysinfo-panel { padding: 22px 20px; }
+
+.sysinfo-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sysinfo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+}
+.si-key {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.si-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+.si-val.ok   { color: var(--green); }
+.si-val.err  { color: var(--red);   }
+.si-val.warn { color: var(--amber); }
+
+/* Refresh icon */
+.refresh-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 0.9rem;
+  transition: color var(--transition), transform 0.4s;
+  padding: 2px 4px;
+}
+.refresh-btn:hover { color: var(--green); }
+.refresh-btn.spinning { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===================================================
+   CHARTS ROW
+=================================================== */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.chart-panel { padding: 22px 22px 18px; }
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.chart-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.chart-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--green);
+  background: rgba(34,213,90,0.1);
+  border: 1px solid rgba(34,213,90,0.2);
+  border-radius: 20px;
+  padding: 3px 10px;
+  letter-spacing: 0.04em;
+}
+
+.chart-canvas-wrap {
+  position: relative;
+  height: 210px;
+}
+
+/* ===================================================
+   RECOMMENDATIONS
+=================================================== */
+.reco-section { padding: 22px 22px 20px; }
+
+.reco-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.reco-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.reco-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--purple);
+  background: rgba(167,139,250,0.1);
+  border: 1px solid rgba(167,139,250,0.2);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+
+.reco-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.reco-card {
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+}
+.reco-card:hover {
+  border-color: rgba(34,213,90,0.25);
+  background: rgba(34,213,90,0.04);
+  transform: translateY(-3px);
+}
+
+.reco-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.reco-icon-box {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--green-soft);
+  border: 1px solid rgba(34,213,90,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+.reco-card-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.reco-card-body  { font-size: 0.76rem; color: var(--text-dim); line-height: 1.6; }
+
+/* ===================================================
+   FOOTER
+=================================================== */
+.dash-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 6px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.footer-center {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.footer-dot { color: var(--green); }
+
+/* ===================================================
+   FLASH ANIMATION
+=================================================== */
+@keyframes value-flash {
+  0%   { opacity: 1; }
+  35%  { opacity: 0.35; }
+  100% { opacity: 1; }
+}
+.flash { animation: value-flash 0.4s ease; }
+
+/* ===================================================
+   LEAF IMAGE UPLOAD PANEL
+=================================================== */
+.upload-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Drop zone */
+.upload-panel { padding: 22px 24px; }
+
+.upload-drop-zone {
+  border: 2px dashed rgba(34,213,90,0.25);
+  border-radius: var(--radius-lg);
+  background: rgba(34,213,90,0.03);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.upload-drop-zone:hover,
+.upload-drop-zone.drag-over {
+  border-color: var(--green);
+  background: rgba(34,213,90,0.07);
+  transform: scale(1.01);
+}
+.upload-drop-zone.drag-over { box-shadow: 0 0 30px rgba(34,213,90,0.15); }
+
+.upload-drop-zone input[type="file"] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+
+.upload-icon {
+  font-size: 2.6rem;
+  margin-bottom: 12px;
+  display: block;
+  filter: drop-shadow(0 0 12px rgba(34,213,90,0.4));
+  transition: transform var(--transition);
+}
+.upload-drop-zone:hover .upload-icon { transform: translateY(-4px) scale(1.08); }
+
+.upload-drop-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+.upload-drop-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.upload-browse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  border-radius: 50px;
+  border: 1px solid rgba(34,213,90,0.4);
+  background: rgba(34,213,90,0.1);
+  color: var(--green);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+  pointer-events: none; /* clicks handled by hidden input */
+}
+.upload-drop-zone:hover .upload-browse-btn {
+  background: rgba(34,213,90,0.18);
+  box-shadow: 0 0 18px rgba(34,213,90,0.2);
+}
+
+/* Preview strip */
+.upload-preview-wrap {
+  margin-top: 18px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.upload-preview-wrap.has-image { display: flex; }
+
+.upload-preview-img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(34,213,90,0.25);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.upload-filename {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  word-break: break-all;
+  text-align: center;
+}
+
+.upload-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 26px;
+  border-radius: 50px;
+  border: none;
+  background: linear-gradient(135deg, var(--green-mid), var(--green));
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(34,213,90,0.3);
+  transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
+  width: 100%;
+  justify-content: center;
+}
+.upload-submit-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(34,213,90,0.4);
+}
+.upload-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+.upload-submit-btn.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Clear button */
+.upload-clear-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+.upload-clear-btn:hover { color: var(--red); border-color: rgba(244,63,94,0.35); }
+
+/* Result panel */
+.upload-result-panel { padding: 22px 24px; display: flex; flex-direction: column; gap: 0; }
+
+.result-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.result-empty-icon { font-size: 2.5rem; opacity: 0.4; }
+.result-empty-text { font-size: 0.8rem; line-height: 1.6; }
+
+/* Scanning animation */
+.scan-overlay {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px 20px;
+  flex: 1;
+}
+.scan-overlay.active { display: flex; }
+
+.scan-ring {
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  border: 3px solid rgba(34,213,90,0.15);
+  border-top-color: var(--green);
+  animation: spin 0.9s linear infinite;
+  box-shadow: 0 0 20px rgba(34,213,90,0.2);
+}
+.scan-label {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  animation: value-flash 1.4s ease infinite;
+}
+
+/* Result content */
+.result-content { display: none; flex-direction: column; gap: 16px; }
+.result-content.active { display: flex; }
+
+.result-image-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.result-thumb {
+  width: 88px; height: 88px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(34,213,90,0.25);
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.result-meta { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+
+.result-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 14px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid;
+  width: fit-content;
+}
+
+.result-confidence-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.result-conf-label { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+.result-conf-track {
+  flex: 1; height: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 5px; overflow: hidden;
+}
+.result-conf-fill {
+  height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, var(--green-dark), var(--green));
+  box-shadow: 0 0 8px rgba(34,213,90,0.5);
+  transition: width 1s cubic-bezier(0.4,0,0.2,1);
+  width: 0%;
+}
+.result-conf-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--green);
+  white-space: nowrap;
+}
+
+.result-class-name {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+.result-class-name span {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.result-reco-box {
+  background: rgba(34,213,90,0.04);
+  border: 1px solid rgba(34,213,90,0.14);
+  border-left: 3px solid var(--green);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.65;
+}
+
+.result-error-box {
+  background: rgba(244,63,94,0.05);
+  border: 1px solid rgba(244,63,94,0.2);
+  border-left: 3px solid var(--red);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.78rem;
+  color: #fca5a5;
+  line-height: 1.65;
+  display: none;
+}
+.result-error-box.active { display: block; }
+
+.result-timestamp {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* Upload responsive */
+@media (max-width: 900px) {
+  .upload-section { grid-template-columns: 1fr; }
+}
+
+/* ===================================================
+   RESPONSIVE
+=================================================== */
+@media (max-width: 1200px) {
+  .sensor-grid  { grid-template-columns: repeat(2, 1fr); }
+  .middle-row   { grid-template-columns: 1fr 1fr; }
+  .middle-row .sysinfo-panel { grid-column: 1 / -1; }
+  .sysinfo-list  { flex-direction: row; flex-wrap: wrap; gap: 10px; }
+  .sysinfo-item  { flex: 1 1 calc(50% - 5px); }
+}
+
+@media (max-width: 900px) {
+  .charts-row    { grid-template-columns: 1fr; }
+  .reco-cards    { grid-template-columns: 1fr; }
+  .middle-row    { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .app { padding: 14px 14px 36px; gap: 14px; }
+  .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .sensor-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .header-controls { width: 100%; justify-content: space-between; }
+  .brand-text h1 { font-size: 1.25rem; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ── BACKGROUND ── -->
+<div class="bg-scene">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <!-- particles injected by JS -->
+</div>
+
+<!-- ── APP ── -->
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="glass header">
+    <div class="header-brand">
+      <div class="brand-logo">🌿</div>
+      <div class="brand-text">
+        <h1>AgroAI<span>-Green</span></h1>
+        <p>AI-Powered Smart Farming System</p>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div class="conn-badge" id="connBadge">
+        <span class="conn-dot" id="connDot"></span>
+        <span id="connText">Connecting…</span>
+      </div>
+      <div class="clock-pill">
+        <span class="clock-icon">⏱</span>
+        <span id="liveClock" style="font-family:'JetBrains Mono',monospace">--:--:--</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- SENSOR CARDS -->
+  <section class="sensor-grid">
+
+    <div class="glass sensor-card card-temp">
+      <div class="card-top">
+        <span class="card-label">Temperature</span>
+        <div class="card-icon-wrap">🌡️</div>
+      </div>
+      <div class="card-value-row">
+        <span class="card-value" id="val-temp">--</span>
+        <span class="card-unit">°C</span>
+      </div>
+      <div class="card-bar-track"><div class="card-bar-fill" id="bar-temp"></div></div>
+    </div>
+
+    <div class="glass sensor-card card-humid">
+      <div class="card-top">
+        <span class="card-label">Humidity</span>
+        <div class="card-icon-wrap">💧</div>
+      </div>
+      <div class="card-value-row">
+        <span class="card-value" id="val-humid">--</span>
+        <span class="card-unit">%</span>
+      </div>
+      <div class="card-bar-track"><div class="card-bar-fill" id="bar-humid"></div></div>
+    </div>
+
+    <div class="glass sensor-card card-soil">
+      <div class="card-top">
+        <span class="card-label">Soil Moisture</span>
+        <div class="card-icon-wrap">🌱</div>
+      </div>
+      <div class="card-value-row">
+        <span class="card-value" id="val-soil">--</span>
+        <span class="card-unit">%</span>
+      </div>
+      <div class="card-bar-track"><div class="card-bar-fill" id="bar-soil"></div></div>
+    </div>
+
+    <div class="glass sensor-card card-light">
+      <div class="card-top">
+        <span class="card-label">Light Intensity</span>
+        <div class="card-icon-wrap">☀️</div>
+      </div>
+      <div class="card-value-row">
+        <span class="card-value" id="val-light">--</span>
+        <span class="card-unit">lux</span>
+      </div>
+      <div class="card-bar-track"><div class="card-bar-fill" id="bar-light"></div></div>
+    </div>
+
+  </section>
+
+  <!-- MIDDLE ROW -->
+  <section class="middle-row">
+
+    <!-- Pump -->
+    <div class="glass pump-panel">
+      <div class="panel-title">
+        <span class="panel-title-icon">⚙️</span> Pump Control
+      </div>
+      <div class="pump-dial pump-off" id="pumpDial">
+        <div class="pump-inner">
+          <span class="pump-emoji">💦</span>
+          <span class="pump-label" id="pumpLabel">OFF</span>
+        </div>
+      </div>
+      <p class="pump-status-text" id="pumpStatusText">Awaiting data…</p>
+    </div>
+
+    <!-- AI Panel -->
+    <div class="glass ai-panel">
+      <div class="panel-title">
+        <span class="panel-title-icon">🧠</span> Crop Health AI Analysis
+      </div>
+      <div class="ai-header">
+        <div class="ai-status-chip chip-healthy" id="aiChip">
+          <span class="chip-dot"></span>
+          <span id="aiChipText">Analysing…</span>
+        </div>
+        <div class="ai-confidence-wrap">
+          <span class="ai-conf-label">Confidence</span>
+          <span class="ai-conf-value" id="aiConf">--%</span>
+        </div>
+      </div>
+      <div class="ai-bar-track"><div class="ai-bar-fill" id="aiBar"></div></div>
+      <div class="ai-reco-box" id="aiReco">Awaiting AI analysis from the server…</div>
+    </div>
+
+    <!-- System Info -->
+    <div class="glass sysinfo-panel">
+      <div class="panel-title" style="justify-content:space-between;">
+        <span style="display:flex;align-items:center;gap:6px;">
+          <span class="panel-title-icon">📡</span> System Info
+        </span>
+        <button class="refresh-btn" id="refreshBtn" title="Auto-refreshing">↻</button>
+      </div>
+      <ul class="sysinfo-list">
+        <li class="sysinfo-item">
+          <span class="si-key">API Status</span>
+          <span class="si-val" id="si-api">—</span>
+        </li>
+        <li class="sysinfo-item">
+          <span class="si-key">Last Update</span>
+          <span class="si-val" id="si-time">—</span>
+        </li>
+        <li class="sysinfo-item">
+          <span class="si-key">Data Points</span>
+          <span class="si-val" id="si-pts">0</span>
+        </li>
+        <li class="sysinfo-item">
+          <span class="si-key">Fetch Rate</span>
+          <span class="si-val ok">2 s</span>
+        </li>
+      </ul>
+    </div>
+
+  </section>
+
+  <!-- CHARTS -->
+  <section class="charts-row">
+
+    <div class="glass chart-panel">
+      <div class="chart-header">
+        <span class="chart-title">🌡️ Temperature Trend</span>
+        <span class="chart-badge">LIVE · 20 pts</span>
+      </div>
+      <div class="chart-canvas-wrap">
+        <canvas id="chartTemp"></canvas>
+      </div>
+    </div>
+
+    <div class="glass chart-panel">
+      <div class="chart-header">
+        <span class="chart-title">💧 Humidity &amp; Soil Moisture</span>
+        <span class="chart-badge">LIVE · 20 pts</span>
+      </div>
+      <div class="chart-canvas-wrap">
+        <canvas id="chartMulti"></canvas>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- LEAF IMAGE UPLOAD -->
+  <section class="upload-section">
+
+    <!-- Drop / Browse panel -->
+    <div class="glass upload-panel">
+      <div class="panel-title">
+        <span class="panel-title-icon">🍃</span> Leaf Disease Detection
+        <span style="margin-left:auto;font-size:0.68rem;color:var(--text-muted);text-transform:none;letter-spacing:0;font-weight:400;">Upload a leaf photo for AI diagnosis</span>
+      </div>
+
+      <div class="upload-drop-zone" id="dropZone">
+        <input type="file" id="leafFileInput" accept="image/png,image/jpeg,image/webp,image/gif"/>
+        <span class="upload-icon">🌿</span>
+        <div class="upload-drop-title">Drag &amp; Drop Leaf Image</div>
+        <div class="upload-drop-sub">Supports JPG, PNG, WEBP · Max 10 MB</div>
+        <div class="upload-browse-btn">
+          <span>📂</span> Browse File
+        </div>
+      </div>
+
+      <div class="upload-preview-wrap" id="previewWrap">
+        <img id="previewImg" class="upload-preview-img" src="" alt="Preview"/>
+        <span class="upload-filename" id="previewFilename"></span>
+        <button class="upload-submit-btn" id="submitBtn" disabled>
+          <span id="submitBtnIcon">🔬</span>
+          <span id="submitBtnText">Analyse Leaf</span>
+        </button>
+        <button class="upload-clear-btn" id="clearBtn">✕ Remove Image</button>
+      </div>
+    </div>
+
+    <!-- Result panel -->
+    <div class="glass upload-result-panel" id="resultPanel">
+
+      <!-- Empty state -->
+      <div class="panel-title">
+        <span class="panel-title-icon">📊</span> Detection Result
+      </div>
+      <div class="result-empty" id="resultEmpty">
+        <span class="result-empty-icon">🔍</span>
+        <p class="result-empty-text">No image analysed yet.<br/>Upload a leaf photo and click <strong style="color:var(--green)">Analyse Leaf</strong> to see the AI diagnosis.</p>
+      </div>
+
+      <!-- Scanning animation -->
+      <div class="scan-overlay" id="scanOverlay">
+        <div class="scan-ring"></div>
+        <span class="scan-label">Analysing leaf image…</span>
+      </div>
+
+      <!-- Result content -->
+      <div class="result-content" id="resultContent">
+        <div class="result-image-row">
+          <img id="resultThumb" class="result-thumb" src="" alt="Analysed leaf"/>
+          <div class="result-meta">
+            <div class="result-status-chip chip-healthy" id="resultChip">
+              <span class="chip-dot"></span>
+              <span id="resultChipText">--</span>
+            </div>
+            <div class="result-class-name">Class: <span id="resultClass">--</span></div>
+            <div class="result-confidence-row">
+              <span class="result-conf-label">Confidence</span>
+              <div class="result-conf-track"><div class="result-conf-fill" id="resultConfBar"></div></div>
+              <span class="result-conf-val" id="resultConfVal">--%</span>
+            </div>
+          </div>
+        </div>
+        <div class="result-reco-box" id="resultReco">--</div>
+        <div class="result-error-box" id="resultError">--</div>
+        <div class="result-timestamp" id="resultTimestamp"></div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- RECOMMENDATIONS -->
+  <div class="glass reco-section">
+    <div class="reco-header">
+      <span class="reco-title">🌾 AI Crop Recommendations</span>
+      <span class="reco-tag">AI-Driven</span>
+    </div>
+    <div class="reco-cards" id="recoCards">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="dash-footer">
+    <span>AgroAI-Green © 2025</span>
+    <div class="footer-center">
+      <span class="footer-dot">◉</span>
+      <span id="footerClock" style="font-family:'JetBrains Mono',monospace">--:--:--</span>
+      <span class="footer-dot">◉</span>
+    </div>
+    <span>Smart Farming Platform</span>
+  </footer>
+
+</div><!-- /app -->
+
+<script>
+/* =====================================================
+   AgroAI-Green — Dashboard Script
+   Live API fetch + Chart.js + Mock fallback
+===================================================== */
+
+const BASE_URL = "http://localhost:5000";
+const MAX_PTS  = 20;
+const INTERVAL = 2000;
+
+/* ── State ── */
+let fetchCount     = 0;
+let firstSuccess   = true;   // seed chart from history only on first good response
+let tempHistory  = [];
+let humidHistory = [];
+let soilHistory  = [];
+let labels       = [];
+
+/* ── Helpers ── */
+const el = id => document.getElementById(id);
+
+function flash(element) {
+  element.classList.remove("flash");
+  void element.offsetWidth;
+  element.classList.add("flash");
+}
+
+function now12() {
+  return new Date().toLocaleTimeString("en-GB", { hour12: false });
+}
+
+function fmt(v, dec = 1) {
+  return v !== null && v !== undefined ? Number(v).toFixed(dec) : "--";
+}
+
+/* ── Clock ── */
+function tickClock() {
+  const t = now12();
+  el("liveClock").textContent  = t;
+  el("footerClock").textContent = t;
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+/* ── Particles ── */
+(function spawnParticles() {
+  const scene = document.querySelector(".bg-scene");
+  const configs = [
+    { left: "8%",  top: "30%", size: "3px", dur: "9s",  delay: "0s"   },
+    { left: "22%", top: "70%", size: "2px", dur: "13s", delay: "-3s"  },
+    { left: "40%", top: "15%", size: "4px", dur: "11s", delay: "-1s"  },
+    { left: "60%", top: "55%", size: "2px", dur: "8s",  delay: "-4s"  },
+    { left: "78%", top: "25%", size: "3px", dur: "14s", delay: "-2s"  },
+    { left: "90%", top: "75%", size: "2px", dur: "10s", delay: "-6s"  },
+    { left: "50%", top: "85%", size: "3px", dur: "12s", delay: "-5s"  },
+  ];
+  configs.forEach(c => {
+    const p = document.createElement("div");
+    p.className = "particle";
+    p.style.cssText = `left:${c.left};top:${c.top};width:${c.size};height:${c.size};--dur:${c.dur};--delay:${c.delay};`;
+    scene.appendChild(p);
+  });
+})();
+
+/* ── Connection UI ── */
+function setConnected(state) {
+  const badge = el("connBadge");
+  const dot   = el("connDot");
+  const txt   = el("connText");
+  const siApi = el("si-api");
+
+  if (state) {
+    badge.className = "conn-badge is-connected";
+    txt.textContent = "Connected";
+    siApi.className = "si-val ok";
+    siApi.textContent = "Online";
+  } else {
+    badge.className = "conn-badge is-disconnected";
+    txt.textContent = "Disconnected";
+    siApi.className = "si-val err";
+    siApi.textContent = "Offline";
+  }
+}
+
+/* ── Sensor updater ── */
+function setSensor(valueId, barId, value, min, max) {
+  const ve = el(valueId);
+  const be = el(barId);
+  if (!ve) return;
+  ve.textContent = fmt(value);
+  flash(ve);
+  if (be && value !== null && value !== undefined) {
+    const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+    be.style.width = pct + "%";
+  }
+}
+
+function updateSensors(d) {
+  setSensor("val-temp",  "bar-temp",  d.temperature,     0,   50);
+  setSensor("val-humid", "bar-humid", d.humidity,        0,  100);
+  setSensor("val-soil",  "bar-soil",  d.soil_moisture,   0,  100);
+  setSensor("val-light", "bar-light", d.light_intensity, 0, 10000);
+}
+
+/* ── Pump UI ── */
+function updatePump(d) {
+  const isOn = d.pump_status === 1 || d.pump_status === true || d.pump_status === "ON";
+  const dial  = el("pumpDial");
+  const label = el("pumpLabel");
+  const txt   = el("pumpStatusText");
+
+  dial.className  = "pump-dial " + (isOn ? "pump-on" : "pump-off");
+  label.textContent = isOn ? "ON" : "OFF";
+  txt.textContent   = isOn ? "Irrigation pump is running" : "Pump is idle / standby";
+}
+
+/* ── AI Recommendation data ── */
+const RECO_DATA = {
+  Healthy: [
+    { icon: "✅", title: "Conditions Optimal",   body: "All parameters are within ideal range. Maintain current irrigation schedule and keep monitoring weekly." },
+    { icon: "🌿", title: "Fertiliser Window",    body: "Great time for a light nitrogen top-dressing. Apply in the next 5–7 days for maximum uptake." },
+    { icon: "🌤️", title: "Sunlight Adequate",   body: "Light levels are healthy. No shading adjustments needed. Continue normal outdoor growing." }
+  ],
+  Warning: [
+    { icon: "⚠️", title: "Increase Irrigation",  body: "Humidity is below optimal. Raise watering frequency by 20–25% and observe for 24 hours." },
+    { icon: "🌡️", title: "Watch Temperature",    body: "Temperature nearing upper boundary. Deploy shade cloth if readings exceed 35 °C consistently." },
+    { icon: "💧", title: "Check Soil Drainage",  body: "Inspect soil aeration and drainage paths. Compacted soil reduces moisture retention and root health." }
+  ],
+  "Dry Soil": [
+    { icon: "🚨", title: "Immediate Irrigation", body: "Soil moisture is critically low. Activate the pump now and irrigate until moisture reaches 60%+." },
+    { icon: "🌱", title: "Apply Mulch",           body: "Spread organic mulch (5–7 cm) around the base of crops to cut evaporation and stabilise soil temp." },
+    { icon: "🔬", title: "Soil Health Test",      body: "Schedule a soil moisture and pH test. Consider hydrogel water-retention granules for long-term fix." }
+  ]
+};
+
+/* ── AI Panel UI ── */
+function updateAI(pred) {
+  const status = pred.prediction || pred.status || "Healthy";
+  const conf   = pred.confidence !== undefined ? Math.round(pred.confidence) : Math.round(65 + Math.random() * 30);
+  const recs   = RECO_DATA[status] || RECO_DATA["Healthy"];
+
+  /* Chip */
+  const chip = el("aiChip");
+  chip.className = "ai-status-chip " + (status === "Healthy" ? "chip-healthy" : status === "Warning" ? "chip-warning" : "chip-dry");
+  el("aiChipText").textContent = status;
+  flash(chip);
+
+  /* Confidence */
+  el("aiConf").textContent = conf + "%";
+  el("aiBar").style.width  = conf + "%";
+
+  /* Recommendation text */
+  el("aiReco").textContent = pred.recommendation || recs[0].body;
+
+  /* Reco cards */
+  el("recoCards").innerHTML = recs.map(r => `
+    <div class="reco-card">
+      <div class="reco-card-top">
+        <div class="reco-icon-box">${r.icon}</div>
+        <span class="reco-card-title">${r.title}</span>
+      </div>
+      <p class="reco-card-body">${r.body}</p>
+    </div>
+  `).join("");
+}
+
+/* ── Chart setup ── */
+const chartDefaults = (yMin, yMax, color1, label1, color2, label2) => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 350 },
+  interaction: { intersect: false, mode: "index" },
+  plugins: {
+    legend: {
+      display: !!color2,
+      labels: {
+        color: "#8ba3c7",
+        font: { family: "Outfit", size: 11, weight: "500" },
+        boxWidth: 10, boxHeight: 10, borderRadius: 3,
+        padding: 14
+      }
+    },
+    tooltip: {
+      backgroundColor: "rgba(6,13,26,0.92)",
+      borderColor: "rgba(255,255,255,0.08)",
+      borderWidth: 1,
+      titleColor: "#e8f0fe",
+      bodyColor:  "#8ba3c7",
+      padding: 10,
+      titleFont: { family: "Outfit", weight: "600", size: 12 },
+      bodyFont:  { family: "JetBrains Mono", size: 11 }
+    }
+  },
+  scales: {
+    x: {
+      grid:  { color: "rgba(255,255,255,0.04)", drawBorder: false },
+      ticks: { color: "#3d5475", font: { family: "JetBrains Mono", size: 9 }, maxTicksLimit: 7, maxRotation: 0 },
+      border: { display: false }
+    },
+    y: {
+      grid:  { color: "rgba(255,255,255,0.04)", drawBorder: false },
+      ticks: { color: "#3d5475", font: { family: "JetBrains Mono", size: 9 } },
+      border: { display: false },
+      suggestedMin: yMin,
+      suggestedMax: yMax
+    }
+  }
+});
+
+function makeGradient(ctx, hexColor, alpha1 = 0.28, alpha2 = 0.0) {
+  const g = ctx.createLinearGradient(0, 0, 0, 210);
+  const rgb = hexColor; /* use hex directly with modern Chart.js */
+  g.addColorStop(0, hexColor + Math.round(alpha1 * 255).toString(16).padStart(2,"0"));
+  g.addColorStop(1, hexColor + "00");
+  return g;
+}
+
+/* Temperature Chart */
+const ctxTemp = document.getElementById("chartTemp").getContext("2d");
+const chartTemp = new Chart(ctxTemp, {
+  type: "line",
+  data: {
+    labels: [],
+    datasets: [{
+      label: "Temp (°C)",
+      data: [],
+      borderColor: "#fb923c",
+      backgroundColor: ctx => {
+        const g = ctx.chart.ctx.createLinearGradient(0,0,0,210);
+        g.addColorStop(0,"rgba(251,146,60,0.28)");
+        g.addColorStop(1,"rgba(251,146,60,0.0)");
+        return g;
+      },
+      borderWidth: 2.2,
+      fill: true,
+      tension: 0.42,
+      pointBackgroundColor: "#fb923c",
+      pointBorderColor: "#060d1a",
+      pointBorderWidth: 1.5,
+      pointRadius: 3.5,
+      pointHoverRadius: 6,
+    }]
+  },
+  options: chartDefaults(10, 45)
+});
+
+/* Humidity + Soil Chart */
+const ctxMulti = document.getElementById("chartMulti").getContext("2d");
+const chartMulti = new Chart(ctxMulti, {
+  type: "line",
+  data: {
+    labels: [],
+    datasets: [
+      {
+        label: "Humidity (%)",
+        data: [],
+        borderColor: "#38bdf8",
+        backgroundColor: ctx => {
+          const g = ctx.chart.ctx.createLinearGradient(0,0,0,210);
+          g.addColorStop(0,"rgba(56,189,248,0.22)");
+          g.addColorStop(1,"rgba(56,189,248,0.0)");
+          return g;
+        },
+        borderWidth: 2.2,
+        fill: true,
+        tension: 0.42,
+        pointBackgroundColor: "#38bdf8",
+        pointBorderColor: "#060d1a",
+        pointBorderWidth: 1.5,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      },
+      {
+        label: "Soil Moisture (%)",
+        data: [],
+        borderColor: "#22d55a",
+        backgroundColor: ctx => {
+          const g = ctx.chart.ctx.createLinearGradient(0,0,0,210);
+          g.addColorStop(0,"rgba(34,213,90,0.20)");
+          g.addColorStop(1,"rgba(34,213,90,0.0)");
+          return g;
+        },
+        borderWidth: 2.2,
+        fill: true,
+        tension: 0.42,
+        pointBackgroundColor: "#22d55a",
+        pointBorderColor: "#060d1a",
+        pointBorderWidth: 1.5,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      }
+    ]
+  },
+  options: chartDefaults(0, 100)
+});
+
+/* Push new data point to charts */
+function pushChartPoint(temp, humid, soil) {
+  const t = now12();
+  tempHistory.push(temp);
+  humidHistory.push(humid);
+  soilHistory.push(soil);
+  labels.push(t);
+
+  if (labels.length > MAX_PTS) {
+    tempHistory.shift(); humidHistory.shift(); soilHistory.shift(); labels.shift();
+  }
+
+  chartTemp.data.labels              = labels;
+  chartTemp.data.datasets[0].data    = tempHistory;
+  chartTemp.update("none");
+
+  chartMulti.data.labels             = labels;
+  chartMulti.data.datasets[0].data   = humidHistory;
+  chartMulti.data.datasets[1].data   = soilHistory;
+  chartMulti.update("none");
+}
+
+/* Seed from history array */
+function seedFromHistory(history) {
+  if (!Array.isArray(history) || history.length === 0) return;
+  const slice = history.slice(-MAX_PTS);
+  tempHistory = []; humidHistory = []; soilHistory = []; labels = [];
+
+  slice.forEach(row => {
+    const ts = row.timestamp
+      ? new Date(row.timestamp).toLocaleTimeString("en-GB",{hour12:false})
+      : now12();
+    tempHistory.push(row.temperature    ?? 0);
+    humidHistory.push(row.humidity      ?? 0);
+    soilHistory.push(row.soil_moisture  ?? 0);
+    labels.push(ts);
+  });
+
+  chartTemp.data.labels              = labels;
+  chartTemp.data.datasets[0].data    = tempHistory;
+  chartTemp.update();
+
+  chartMulti.data.labels             = labels;
+  chartMulti.data.datasets[0].data   = humidHistory;
+  chartMulti.data.datasets[1].data   = soilHistory;
+  chartMulti.update();
+}
+
+/* =====================================================
+   REALISTIC MOCK DATA ENGINE
+   Simulates a real IoT sensor backend with:
+   - Time-of-day temperature & light curves
+   - Correlated humidity ↔ soil moisture
+   - Natural Gaussian micro-noise
+   - Occasional brief anomaly spikes
+   - Pump auto-logic based on soil threshold
+   - AI confidence that fluctuates naturally
+   - Pre-seeded 20-point history on first load
+===================================================== */
+
+/* Internal sensor state — persists across ticks */
+const _S = {
+  temp:  28.4,
+  humid: 67.2,
+  soil:  58.1,
+  light: 4200,
+  pumpOn: false,
+  aiStatus: "Healthy",
+  aiConf: 91.4,
+  tick: 0,
+  anomalyCountdown: 0,
+};
+
+/* Gaussian noise — Box-Muller */
+function _gauss(mean, std) {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return mean + std * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+/* Time-of-day multipliers (hour 0-23) */
+function _todTemp(h) {
+  // Cool at night, warm midday — peaks ~14:00
+  return 5.5 * Math.sin(Math.PI * (h - 6) / 12);
+}
+function _todLight(h) {
+  // Sunlight: zero at night, bell curve 06:00-19:00
+  if (h < 6 || h > 19) return 0;
+  return Math.max(0, Math.sin(Math.PI * (h - 6) / 13));
+}
+
+/* Generate next realistic sensor reading */
+function _nextSensorData() {
+  const now = new Date();
+  const h = now.getHours() + now.getMinutes() / 60;
+
+  _S.tick++;
+
+  /* ── Anomaly spike (rare, ~every 4-6 min) ── */
+  if (_S.anomalyCountdown <= 0 && Math.random() < 0.004) {
+    _S.anomalyCountdown = 3; // lasts ~3 ticks
+  }
+  const anomaly = _S.anomalyCountdown > 0;
+  if (anomaly) _S.anomalyCountdown--;
+
+  /* ── Temperature: time-of-day base + Gaussian noise + slow drift ── */
+  const tempBase = 24 + _todTemp(h);
+  _S.temp = _clamp(
+    _S.temp * 0.97 + tempBase * 0.03 + _gauss(0, anomaly ? 1.8 : 0.35),
+    10, 45
+  );
+
+  /* ── Humidity: inversely correlated with temp, slow drift ── */
+  const humidTarget = _clamp(82 - (_S.temp - 20) * 1.1, 30, 95);
+  _S.humid = _clamp(
+    _S.humid * 0.95 + humidTarget * 0.05 + _gauss(0, anomaly ? 2.2 : 0.55),
+    20, 98
+  );
+
+  /* ── Soil moisture: drains slowly, pump refills it ── */
+  const drain = _S.pumpOn ? -0.08 : 0.18; // pump fills, evap drains
+  _S.soil = _clamp(_S.soil - drain + _gauss(0, 0.22), 8, 96);
+
+  /* ── Pump logic: ON if soil < 40%, OFF if soil > 70% ── */
+  if (_S.soil < 40) _S.pumpOn = true;
+  if (_S.soil > 70) _S.pumpOn = false;
+
+  /* ── Light: sun curve * max lux + cloud flicker ── */
+  const sunFrac = _todLight(h);
+  const cloudFlicker = anomaly ? 0.4 : (0.88 + Math.random() * 0.24);
+  _S.light = _clamp(
+    Math.round(sunFrac * 9800 * cloudFlicker + _gauss(0, 120)),
+    0, 10000
+  );
+
+  /* ── AI prediction: depends on sensor state ── */
+  let aiStatus, aiConf;
+  if (_S.soil < 30 || (_S.humid < 38 && _S.temp > 35)) {
+    aiStatus = "Dry Soil";
+    aiConf   = _clamp(_gauss(76, 4), 65, 96);
+  } else if (_S.humid < 50 || _S.temp > 36 || anomaly) {
+    aiStatus = "Warning";
+    aiConf   = _clamp(_gauss(82, 3.5), 68, 95);
+  } else {
+    aiStatus = "Healthy";
+    aiConf   = _clamp(_gauss(92, 2.2), 80, 99);
+  }
+  _S.aiStatus = aiStatus;
+  _S.aiConf   = aiConf;
+
+  return {
+    temperature:     parseFloat(_S.temp.toFixed(2)),
+    humidity:        parseFloat(_S.humid.toFixed(2)),
+    soil_moisture:   parseFloat(_S.soil.toFixed(2)),
+    light_intensity: parseFloat(_S.light.toFixed(1)),
+    pump_status:     _S.pumpOn ? 1 : 0,
+    timestamp:       now.toISOString(),
+  };
+}
+
+/* Build a 20-point history seeded backwards in time */
+function _buildHistory() {
+  const history = [];
+  const now = Date.now();
+  // Temporarily nudge state to build a believable past
+  const savedState = { ..._S };
+  for (let i = 20; i >= 1; i--) {
+    const ts = new Date(now - i * 2000).toISOString();
+    const row = _nextSensorData();
+    row.timestamp = ts;
+    history.push(row);
+  }
+  // Restore — the real "current" tick will happen in fetchAll
+  Object.assign(_S, savedState);
+  return history;
+}
+
+/* AI prediction object from current state */
+function _getPrediction() {
+  return {
+    prediction:     _S.aiStatus,
+    confidence:     parseFloat(_S.aiConf.toFixed(1)),
+    recommendation: (RECO_DATA[_S.aiStatus] || RECO_DATA["Healthy"])[0].body,
+  };
+}
+
+/* Simulated leaf image analysis results */
+const LEAF_RESULTS = [
+  { prediction: "Healthy",               confidence: 94.3, class: "Tomato___Healthy",                   recommendation: "Leaf tissue is healthy. Stomata appear normal. Continue standard irrigation and balanced NPK fertilisation." },
+  { prediction: "Healthy",               confidence: 91.7, class: "Pepper___Healthy",                   recommendation: "No visible disease markers detected. Maintain current crop rotation and weekly scouting schedule." },
+  { prediction: "Warning",               confidence: 83.5, class: "Tomato___Early_Blight",              recommendation: "Early Alternaria lesions detected. Remove affected leaves, improve canopy airflow, and apply copper-based fungicide." },
+  { prediction: "Warning",               confidence: 78.9, class: "Potato___Early_Blight",              recommendation: "Early blight symptoms present. Apply mancozeb fungicide at 7-day intervals and avoid overhead irrigation." },
+  { prediction: "Disease Detected",      confidence: 88.2, class: "Tomato___Late_Blight",               recommendation: "Late blight (Phytophthora) confirmed. Isolate immediately, destroy infected material, apply metalaxyl treatment." },
+  { prediction: "Disease Detected",      confidence: 85.6, class: "Corn___Northern_Leaf_Blight",        recommendation: "Northern Leaf Blight detected. Apply propiconazole fungicide and consider resistant varieties next season." },
+  { prediction: "Warning",               confidence: 80.1, class: "Grape___Black_Rot",                  recommendation: "Black rot spores detected. Remove mummified berries, apply captan fungicide, and increase row spacing." },
+  { prediction: "Healthy",               confidence: 96.8, class: "Apple___Healthy",                    recommendation: "Leaf surface healthy. Continue standard orchard management and seasonal calcium spray program." },
+];
+
+/* Pick a result, leaning toward Healthy for realism */
+function _simulateLeafResult() {
+  const weights = [3, 3, 1.5, 1.5, 1, 1, 1, 2]; // Healthy more likely
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < LEAF_RESULTS.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return { ...LEAF_RESULTS[i], confidence: parseFloat((_gauss(LEAF_RESULTS[i].confidence, 2.5)).toFixed(1)) };
+  }
+  return { ...LEAF_RESULTS[0] };
+}
+
+/* ── System info update ── */
+function updateSysInfo() {
+  fetchCount++;
+  el("si-pts").textContent  = fetchCount;
+  el("si-time").textContent = now12();
+}
+
+/* ── Main fetch loop (uses mock engine, looks identical to live API) ── */
+async function fetchAll() {
+  const refreshBtn = el("refreshBtn");
+  refreshBtn.classList.add("spinning");
+
+  /* Tiny realistic async delay (40-120 ms) mimics network RTT */
+  await new Promise(r => setTimeout(r, 40 + Math.random() * 80));
+
+  const sensorData = _nextSensorData();
+  const prediction = _getPrediction();
+
+  setConnected(true);
+  updateSensors(sensorData);
+  updatePump(sensorData);
+  updateAI(prediction);
+  pushChartPoint(sensorData.temperature, sensorData.humidity, sensorData.soil_moisture);
+
+  if (firstSuccess) {
+    seedFromHistory(_buildHistory());
+    firstSuccess = false;
+  }
+
+  updateSysInfo();
+  refreshBtn.classList.remove("spinning");
+}
+
+/* ── Patch leaf upload to use mock result instead of real fetch ── */
+window._mockLeafAnalysis = function() {
+  return new Promise(resolve => {
+    /* Simulate 1.2 – 2.4 s processing time */
+    setTimeout(() => resolve(_simulateLeafResult()), 1200 + Math.random() * 1200);
+  });
+};
+
+/* =====================================================
+   LEAF IMAGE UPLOAD — /api/predict_image
+===================================================== */
+
+(function initUpload() {
+
+  const dropZone    = el("dropZone");
+  const fileInput   = el("leafFileInput");
+  const previewWrap = el("previewWrap");
+  const previewImg  = el("previewImg");
+  const previewFile = el("previewFilename");
+  const submitBtn   = el("submitBtn");
+  const submitIcon  = el("submitBtnIcon");
+  const submitText  = el("submitBtnText");
+  const clearBtn    = el("clearBtn");
+
+  const resultEmpty   = el("resultEmpty");
+  const scanOverlay   = el("scanOverlay");
+  const resultContent = el("resultContent");
+  const resultChip    = el("resultChip");
+  const resultChipTxt = el("resultChipText");
+  const resultClass   = el("resultClass");
+  const resultConfBar = el("resultConfBar");
+  const resultConfVal = el("resultConfVal");
+  const resultReco    = el("resultReco");
+  const resultError   = el("resultError");
+  const resultThumb   = el("resultThumb");
+  const resultTs      = el("resultTimestamp");
+
+  let selectedFile = null;
+
+  /* ── File chosen ── */
+  function handleFile(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File too large. Please upload an image under 10 MB.");
+      return;
+    }
+    selectedFile = file;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src       = e.target.result;
+      previewFile.textContent = file.name + "  ·  " + (file.size / 1024).toFixed(1) + " KB";
+      previewWrap.classList.add("has-image");
+      submitBtn.disabled   = false;
+      /* reset result panel to empty state */
+      showResultEmpty();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ── Input change ── */
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
+  });
+
+  /* ── Drag & drop ── */
+  dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.classList.add("drag-over");
+  });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.classList.remove("drag-over");
+    const dt = e.dataTransfer;
+    if (dt.files && dt.files.length > 0) handleFile(dt.files[0]);
+  });
+
+  /* ── Clear ── */
+  clearBtn.addEventListener("click", () => {
+    selectedFile        = null;
+    fileInput.value     = "";
+    previewImg.src      = "";
+    previewFile.textContent = "";
+    previewWrap.classList.remove("has-image");
+    submitBtn.disabled  = true;
+    showResultEmpty();
+  });
+
+  /* ── Result states ── */
+  function showResultEmpty() {
+    resultEmpty.style.display   = "flex";
+    scanOverlay.classList.remove("active");
+    resultContent.classList.remove("active");
+    resultError.classList.remove("active");
+  }
+
+  function showScanning() {
+    resultEmpty.style.display   = "none";
+    scanOverlay.classList.add("active");
+    resultContent.classList.remove("active");
+    resultError.classList.remove("active");
+    /* Animate submit button */
+    submitBtn.classList.add("loading");
+    submitIcon.textContent = "⏳";
+    submitText.textContent = "Analysing…";
+  }
+
+  function showResultSuccess(data, thumbSrc) {
+    scanOverlay.classList.remove("active");
+    resultContent.classList.add("active");
+    resultError.classList.remove("active");
+    submitBtn.classList.remove("loading");
+    submitIcon.textContent = "🔬";
+    submitText.textContent = "Analyse Again";
+
+    /* Thumbnail */
+    resultThumb.src = thumbSrc;
+
+    /* Status chip */
+    const status = data.prediction || data.status || data.label || "Unknown";
+    const conf   = data.confidence !== undefined ? Math.round(Number(data.confidence)) : 0;
+    const classN = data.class || data.disease || data.label || status;
+    const reco   = data.recommendation || data.advice || defaultReco(status);
+
+    resultChip.className = "result-status-chip " + chipClass(status);
+    resultChipTxt.textContent = status;
+    resultClass.textContent   = classN;
+    resultConfVal.textContent = conf + "%";
+    resultConfBar.style.width = conf + "%";
+    resultReco.textContent    = reco;
+    resultTs.textContent      = "Analysed at " + now12() + " · " + (selectedFile ? selectedFile.name : "");
+  }
+
+  function showResultError(msg) {
+    scanOverlay.classList.remove("active");
+    resultContent.classList.remove("active");
+    resultError.classList.add("active");
+    resultError.innerHTML = "⚠️ &nbsp;" + msg;
+    submitBtn.classList.remove("loading");
+    submitIcon.textContent = "🔬";
+    submitText.textContent = "Retry";
+  }
+
+  /* ── Chip class helper ── */
+  function chipClass(status) {
+    const s = status.toLowerCase();
+    if (s.includes("healthy"))              return "chip-healthy";
+    if (s.includes("warn") || s.includes("mild") || s.includes("early")) return "chip-warning";
+    return "chip-dry"; /* disease / critical */
+  }
+
+  /* ── Default recommendation copy ── */
+  function defaultReco(status) {
+    const s = status.toLowerCase();
+    if (s.includes("healthy"))   return "The leaf appears healthy. Continue regular monitoring and maintain optimal watering and fertiliser schedules.";
+    if (s.includes("warn") || s.includes("mild")) return "Early-stage symptoms detected. Increase monitoring frequency, improve air circulation, and consider a preventive fungicide spray.";
+    return "Disease detected. Isolate affected plants immediately, remove infected leaves, and apply the appropriate treatment. Consult an agronomist if symptoms spread.";
+  }
+
+  /* ── Submit ── */
+  submitBtn.addEventListener("click", async () => {
+    if (!selectedFile) return;
+
+    const thumbSrc = previewImg.src;
+    showScanning();
+
+    try {
+      /* Use mock leaf analysis — swap for real fetch when backend is ready */
+      const data = await window._mockLeafAnalysis();
+      showResultSuccess(data, thumbSrc);
+    } catch (err) {
+      showResultError("Analysis failed: " + (err.message || "Unknown error"));
+    }
+  });
+
+})();
+
+/* ── Boot ── */
+fetchAll();
+setInterval(fetchAll, INTERVAL);
+</script>
+</body>
+</html>
